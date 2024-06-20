@@ -4,6 +4,8 @@ use core::{
     fmt::{Display, Formatter},
     str::FromStr,
 };
+use std::cmp::Ordering;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -22,68 +24,93 @@ pub enum ConsensusType {
     ProofOfStake,
 }
 
-/// The name of an Ethereum hardfork.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
-#[non_exhaustive]
-pub enum Hardfork {
-    /// Frontier: <https://blog.ethereum.org/2015/03/03/ethereum-launch-process>.
-    Frontier,
-    /// Homestead: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/homestead.md>.
-    Homestead,
-    /// The DAO fork: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/dao-fork.md>.
-    Dao,
-    /// Tangerine: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/tangerine-whistle.md>.
-    Tangerine,
-    /// Spurious Dragon: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/spurious-dragon.md>.
-    SpuriousDragon,
-    /// Byzantium: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/byzantium.md>.
-    Byzantium,
-    /// Constantinople: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/constantinople.md>.
-    Constantinople,
-    /// Petersburg: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/petersburg.md>.
-    Petersburg,
-    /// Istanbul: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/istanbul.md>.
-    Istanbul,
-    /// Muir Glacier: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/muir-glacier.md>.
-    MuirGlacier,
-    /// Berlin: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/berlin.md>.
-    Berlin,
-    /// London: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md>.
-    London,
-    /// Arrow Glacier: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/arrow-glacier.md>.
-    ArrowGlacier,
-    /// Gray Glacier: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/gray-glacier.md>.
-    GrayGlacier,
-    /// Paris: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/paris.md>.
-    Paris,
-    /// Bedrock: <https://blog.oplabs.co/introducing-optimism-bedrock>.
-    #[cfg(feature = "optimism")]
-    Bedrock,
-    /// Regolith: <https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/superchain-upgrades.md#regolith>.
-    #[cfg(feature = "optimism")]
-    Regolith,
-    /// Shanghai: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md>.
-    Shanghai,
-    /// Canyon:
-    /// <https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/superchain-upgrades.md#canyon>.
-    #[cfg(feature = "optimism")]
-    Canyon,
-    // ArbOS11,
-    /// Cancun.
-    Cancun,
-    /// Ecotone: <https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/superchain-upgrades.md#ecotone>.
-    #[cfg(feature = "optimism")]
-    Ecotone,
-    // ArbOS20Atlas,
-
-    // Upcoming
-    /// Prague: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/prague.md>
-    Prague,
-    /// Fjord: <https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/superchain-upgrades.md#fjord>
-    #[cfg(feature = "optimism")]
-    Fjord,
+pub trait HardforkTrait: Ord {
+    fn name(&self) -> &'static str;
 }
+
+macro_rules! define_hardfork_enum {
+    ($(#[$enum_meta:meta])* $enum:ident { $( $(#[$meta:meta])* $variant:ident ),* $(,)? }) => {
+        $(#[$enum_meta])*
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
+        #[non_exhaustive]
+        pub enum $enum {
+            $( $(#[$meta])* $variant ),*
+        }
+
+        impl $enum {
+            pub const fn name(&self) -> &'static str {
+                match self {
+                    $( $enum::$variant => stringify!($variant), )*
+                }
+            }
+        }
+
+        impl HardforkTrait for $enum {
+            fn name(&self) -> &'static str {
+                self.name()
+            }
+        }
+    }
+}
+
+define_hardfork_enum!(
+    /// The name of an Ethereum hardfork.
+    Hardfork {
+        /// Frontier: <https://blog.ethereum.org/2015/03/03/ethereum-launch-process>.
+        Frontier,
+        /// Homestead: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/homestead.md>.
+        Homestead,
+        /// The DAO fork: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/dao-fork.md>.
+        Dao,
+        /// Tangerine: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/tangerine-whistle.md>.
+        Tangerine,
+        /// Spurious Dragon: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/spurious-dragon.md>.
+        SpuriousDragon,
+        /// Byzantium: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/byzantium.md>.
+        Byzantium,
+        /// Constantinople: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/constantinople.md>.
+        Constantinople,
+        /// Petersburg: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/petersburg.md>.
+        Petersburg,
+        /// Istanbul: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/istanbul.md>.
+        Istanbul,
+        /// Muir Glacier: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/muir-glacier.md>.
+        MuirGlacier,
+        /// Berlin: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/berlin.md>.
+        Berlin,
+        /// London: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/london.md>.
+        London,
+        /// Arrow Glacier: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/arrow-glacier.md>.
+        ArrowGlacier,
+        /// Gray Glacier: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/gray-glacier.md>.
+        GrayGlacier,
+        /// Paris: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/paris.md>.
+        Paris,
+        /// Shanghai: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/shanghai.md>.
+        Shanghai,
+        /// Cancun.
+        Cancun,
+        /// Prague: <https://github.com/ethereum/execution-specs/blob/master/network-upgrades/mainnet-upgrades/prague.md>
+        Prague,
+    }
+);
+
+define_hardfork_enum!(
+    /// The name of an optimism hardfork.
+    OptimismHardfork {
+        /// Bedrock: <https://blog.oplabs.co/introducing-optimism-bedrock>.
+        Bedrock,
+        /// Regolith: <https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/superchain-upgrades.md#regolith>.
+        Regolith,
+        /// <https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/superchain-upgrades.md#canyon>.
+        Canyon,
+        /// Ecotone: <https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/superchain-upgrades.md#ecotone>.
+        Ecotone,
+        /// Fjord: <https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/superchain-upgrades.md#fjord>
+        Fjord,
+    }
+);
 
 impl Hardfork {
     /// Retrieves the consensus type for the specified hardfork.
