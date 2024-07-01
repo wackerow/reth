@@ -200,7 +200,7 @@ fn fill_tx_env_with_system_contract_call(
         // blob fields can be None for this tx
         blob_hashes: Vec::new(),
         max_fee_per_blob_gas: None,
-        authorization_list: Vec::new(),
+        authorization_list: None,
         #[cfg(feature = "optimism")]
         optimism: OptimismFields {
             source_hash: None,
